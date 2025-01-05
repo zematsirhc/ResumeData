@@ -10,8 +10,10 @@ border_crossings = border_crossings.with_row_index()
 with pl.Config(tbl_cols=-1):
     print(border_crossings)
 
+# Reserve 20% of the data for testing purposes
 split = ShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
 
+# Establish the training and testing sets
 for test_index, train_index in split.split(border_crossings):
     test_set = border_crossings.filter(pl.col("index").is_in(test_index))
     train_set = border_crossings.filter(pl.col("index").is_in(train_index))
@@ -24,9 +26,9 @@ print(f"Test set: {len(test_set)}  Train set: {len(train_set)}")
 
 print(train_set.describe())
 
-train_set.write_parquet(
-    r"C:\Users\Chris\OneDrive\Desktop\Python\datascience\data\train_set.parquet"
+""" train_set.write_parquet(
+    r"border_crossings\data\train_set.parquet"
 )
 test_set.write_parquet(
-    r"C:\Users\Chris\OneDrive\Desktop\Python\datascience\data\test_set.parquet"
-)
+    r"border_crossings\data\test_set.parquet"
+) """
