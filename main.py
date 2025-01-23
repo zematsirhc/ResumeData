@@ -14,10 +14,13 @@ y = ["Value"]
 X = training.drop(y, axis=1)
 y = training.copy(y)
 
+crossing_cat = [""]
+
 
 class DateTransformer(BaseEstimator, TransformerMixin):
     """
-    Transforms a string date column into K-Hot encoding
+    Transforms a string date column into year and month columns.
+    TransformerMixin gives you a fit_transform method automatically.
     """
 
     def __init__(self, column: str, date_format="%b %Y"):
@@ -49,14 +52,6 @@ transformer = ColumnTransformer(
     ]
 )
 
-pandas_training = training.to_pandas()
-transformed_data = transformer.fit_transform(pandas_training)
-
-# Allows us to see all the columns
-with pl.Config(tbl_cols=-1):
-    print(transformed_data)
-
-print(transformed_data)
 
 # To do:
 # drop the values column and make a separate dataframe that has the values
