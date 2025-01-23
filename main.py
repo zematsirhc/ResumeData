@@ -1,45 +1,47 @@
 import polars as pl
 from sklearn.base import BaseEstimator, TransformerMixin
-from datetime import datetime
+from datetime import datetime as dt
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 import pandas as pd
+import numpy as np
 
-training = pl.read_parquet(r"border_crossings\data\train_set.parquet")
+training = pd.read_parquet(r"border_crossings\data\train_set.parquet")
+
+# Split the training data from the labels
+y = ["Value"]
+X = training.drop(y, axis=1)
+y = training.copy(y)
+
+crossing_cat = [""]
 
 
 class DateTransformer(BaseEstimator, TransformerMixin):
     """
-    Transforms a string date column into a proper date format
+    Transforms a string date column into year and month columns.
+    TransformerMixin gives you a fit_transform method automatically.
     """
 
     def __init__(self, column: str, date_format="%b %Y"):
         self.date_format = date_format
         self.column = column
 
-    def fit(self, X: pl.DataFrame, y=None) -> pl.DataFrame:
+    def fit(self, X, y=None):
+        """
+        Fit only needs to return self
+        """
         return self
 
-    def transform(self, X: pl.DataFrame) -> pl.DataFrame:
+    def transform(self, X):
+        X["Date"] = pd.to_datetime(X["Date"], format=self.date_format)
+        X["Year"] = X[self.column].dt.year
+        X["Month"] = X[self.column].dt.month
+        print(X)
 
-        if isinstance(X, pd.DataFrame):
-            # Convert pandas to polars
-            X = pl.from_pandas(X)
 
-        if self.column not in X.columns:
-            raise ValueError(f"Column '{self.column}' not found in the DataFrame.")
-        X = X.with_columns(pl.col(self.column).str.to_date("%b %Y"))
-        epoch = pl.lit(datetime(1950, 1, 1))
-        # Calculate days since epoch
-        nanoseconds_per_day = 24 * 60 * 60 * 1_000_000_000  # Nanoseconds in a day
-        X = X.with_columns(
-            ((pl.col(self.column) - epoch).cast(pl.Int64) / nanoseconds_per_day)
-            .cast(pl.Int64)
-            .alias("Days Since Epoch")
-        )
-        X = X.drop(self.column)
-        return X.to_pandas()
+datetransformer = DateTransformer("Date")
+datetransformer.transform(X)
 
 
 transformer = ColumnTransformer(
@@ -50,11 +52,13 @@ transformer = ColumnTransformer(
     ]
 )
 
-pandas_training = training.to_pandas()
-transformed_data = transformer.fit_transform(pandas_training)
 
-# Allows us to see all the columns
-with pl.Config(tbl_cols=-1):
-    print(transformed_data)
-
-print(transformed_data)
+# To do:
+# drop the values column and make a separate dataframe that has the values
+# We can split the numeric columns and the categorical columns into separate
+# pipelines, and then transform them both in a ColumnTransformer or using from sklearn.pipeline.FeatureUnion
+# e.g., from sklear.compose import ColumnTransformer
+# full_pipeline = ColumnTransformer([
+#        ("num", num_pipeline, num_attribs), # Where num_pipeline is its own pipeline
+#        ("cat", OneHotEncoder(), cat_attribs),
+#    ])
